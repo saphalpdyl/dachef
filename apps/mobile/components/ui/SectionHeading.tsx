@@ -7,6 +7,7 @@ export default function SectionHeading({ children }: { children: React.ReactNode
       style={{
         fontSize: 21,
         fontFamily: "InriaSans-Bold",
+        fontWeight: "bold",
 
       }}
     >{children}</Text>

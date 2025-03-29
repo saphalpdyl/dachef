@@ -14,8 +14,10 @@ import { Theme } from "@/components/theme";
 import { useFonts } from "expo-font";
 import SectionHeading from "@/components/ui/SectionHeading";
 import SectionLabel from "@/components/ui/SectionLabel";
+import { useRouter } from "expo-router";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [fontsLoaded] = useFonts({
     InriaSans: require("../../assets/fonts/InriaSans-Bold.ttf"), // Adjust the path as needed
     "InriaSans-Italic": require("../../assets/fonts/InriaSans-Italic.ttf"),
@@ -98,7 +100,10 @@ export default function HomeScreen() {
               borderColor: "black",
               borderRadius: 10,
               borderStyle: "dashed",
-              // on press, make the background color change to Theme.primary
+            }}
+            onPress={() => {
+              // router.push("/camera");
+              router.navigate("/create_recipe");
             }}
           >
             <Image

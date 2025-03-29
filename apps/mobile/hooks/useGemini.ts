@@ -3,7 +3,7 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 import * as FileSystem from 'expo-file-system';
 
 // Define types for the detection results
-interface DetectionItem {
+export interface DetectionItem {
   label: string;
   [key: string]: any; // For any additional properties Gemini might return
 }
@@ -117,6 +117,7 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
       return items;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Error detecting items:', errorMessage);
       setError(errorMessage);
       return [];
     } finally {
