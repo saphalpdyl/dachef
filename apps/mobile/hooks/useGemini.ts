@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import * as FileSystem from 'expo-file-system';
 
+import { GoogleGenAI } from "@google/genai";
+
 // Define types for the detection results
 export interface DetectionItem {
   label: string;
@@ -13,7 +15,15 @@ interface UseGeminiReturn {
   detectItems: (imageUri: string) => Promise<DetectionItem[]>;
   isLoading: boolean;
   error: string | null;
-  findRecipe: (items: DetectionItem[]) => Promise<string>;
+  findRecipe: (items: DetectionItem[]) => Promise<{
+    searchQueries: string[],
+    whereItSearched: {
+      "web": {
+        title: string,
+        uri: string,
+      }
+    }[]
+  }>;
 }
 
 export const useGemini = (apiKey: string): UseGeminiReturn => {
@@ -22,6 +32,7 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
   
   // Initialize the Generative AI client
   const genAI = new GoogleGenerativeAI(apiKey);
+  const newGenAI = new GoogleGenAI({ apiKey });
   const modelName = 'gemini-2.5-pro-exp-03-25';
 
   /**
@@ -60,6 +71,8 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
   };
 
   const detectItems = async (imageUri: string): Promise<DetectionItem[]> => {
+    return [{"label": "Doughnut"}, {"label": "Yogurt"}, {"label": "Pickles"}, {"label": "Green apple"}, {"label": "Containerized food"}, {"label": "Red apple"}, {"label": "Lemon"}, {"label": "Egg"}, {"label": "Avocado"}, {"label": "Pickled vegetables"}, {"label": "Jam/Preserves"}, {"label": "Celery"}, {"label": "Fresh herbs"}, {"label": "Honey"}, {"label": "Juice"}, {"label": "Milk"}, {"label": "Carrot"}, {"label": "Sausage"}, {"label": "Orange"}, {"label": "Green bell pepper"}, {"label": "Yellow bell pepper"}, {"label": "Tomato"}, {"label": "Butter"}];
+    
     setIsLoading(true);
     setError(null);
     
@@ -113,7 +126,7 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
       // Parse the JSON
       const jsonString = parseJson(responseText);
       const items: DetectionItem[] = JSON.parse(jsonString);
-      
+
       return items;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -125,13 +138,26 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
     }
   };
 
-  const findRecipe = async (items: DetectionItem[]): Promise<string> => {
+  const findRecipe = async (items: DetectionItem[]): Promise<{
+    searchQueries: string[],
+    whereItSearched: {
+      "web": {
+        title: string,
+        uri: string,
+      }
+    }[],
+    response: string,
+  }> => {
     try {
       // Extract item labels to use as ingredients
       const ingredients = items.map(item => item.label);
       
       if (ingredients.length === 0) {
-        return "No ingredients detected. Please try again with a clearer image.";
+        return {
+          searchQueries: [],
+          whereItSearched: [],
+          response: "",
+        };
       }
       
       // Initialize the Gemini API client
@@ -139,95 +165,41 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
       
       // Get the model with web search capability
       // Note: You need to use a model that supports web search
-      const model = genAI.getGenerativeModel({
+      const response = await newGenAI.models.generateContent({
         model: "gemini-2.5-pro-exp-03-25",
-        systemInstruction: "You are a helpful culinary assistant that finds recipes based on available ingredients.",
-        tools: [{ name: "web_search" }]
-      });
-      
-      // Create a prompt for Gemini to search for recipes
-      const prompt = `
-      I have the following ingredients in my fridge/kitchen: ${ingredients.join(', ')}.
-      
-      Search the web and find me a suitable recipe that uses most of these ingredients. 
-      Format your response as follows:
-      
-      1. Recipe name (with a link to the source)
-      2. Ingredients I already have from my list
-      3. Additional ingredients I'll need to buy
-      4. Brief cooking instructions
-      5. Estimated cooking time
-      6. Number of servings
-      
-      Do not make up a recipe - only use recipes you can find from real websites. 
-      Prefer recipes that use as many of my ingredients as possible.
-      `;
-      
-      // Generate content with web search enabled
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-        },
+        // systemInstruction: "You are a helpful culinary assistant that finds recipes based on available ingredients.",
+        contents: [
+          {
+            role: 'model',
+            parts: [{ text: "You are a helpful culinary assistant that finds recipes based on available ingredients." }]
+          },
+          {
+            role: 'user',
+            parts: [{ text: `I have the following ingredients in my fridge/kitchen: ${ingredients.join(', ')}.` }]
+          }
+        ],
         config: {
-          tools: [{googleSearch: {}}],
+          tools: [{googleSearch: {
+
+          }}],
         },
       });
-      
-      const response = result.response;
-      let recipeText = response.text();
-      
-      // Format recipe response
-      if (recipeText.trim().length === 0) {
-        return createFallbackRecipeSuggestion(ingredients);
-      }
-      
-      // Add header with ingredient list as context
-      return `# Recipe Based on Your Ingredients
-      
-      Available ingredients: ${ingredients.join(', ')}
-      
-      ${recipeText}
-      `;
-          
-        } catch (error) {
-          console.error('Error searching for recipes:', error);
-          return createFallbackRecipeSuggestion(items.map(item => item.label));
-        }
+
+      const searchQueries = response.candidates![0].groundingMetadata!.webSearchQueries;
+      const whereItSearched = response.candidates![0].groundingMetadata!.groundingChunks;
+      return {
+        searchQueries: searchQueries ?? [],
+        whereItSearched: whereItSearched as any ?? [],
+        response: response.text ?? "",
       };
-      
-      /**
-       * Creates a fallback recipe suggestion if the API call fails
-       */
-      const createFallbackRecipeSuggestion = (ingredients: string[]): string => {
-        if (ingredients.length === 0) {
-          return "No ingredients detected. Please try again with a clearer image.";
-        }
-        
-        // Generate a Google search URL with the ingredients
-        const searchQuery = encodeURIComponent(`recipe with ${ingredients.join(' ')}`);
-        const googleSearchUrl = `https://www.google.com/search?q=${searchQuery}`;
-        
-        // Create a simple recommendation based on available ingredients
-        return `
-      # Quick Recipe Suggestion
-      
-      I noticed you have the following ingredients:
-      ${ingredients.map(ing => `- ${ing}`).join('\n')}
-      
-      I couldn't connect to search for recipes at the moment. Try:
-      
-      1. [Search Google for recipes](${googleSearchUrl})
-      2. Try popular recipe websites:
-        - Allrecipes
-        - BBC Good Food
-        - Epicurious
-        - Food Network
-      
-      3. Or use ingredient-based search tools:
-        - SuperCook
-        - MyFridgeFood
-      `;
+    } catch (error) {
+      console.error('Error searching for recipes:', error);
+      return {
+        searchQueries: [],
+        whereItSearched: [],
+        response: "",
+      };
+    }
   };
   
   

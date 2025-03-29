@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   list: {
-    height: 500,
+    maxHeight: 500,
   },
   row: {
     flexDirection: 'row',

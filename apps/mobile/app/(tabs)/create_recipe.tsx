@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
 
 export default function CameraScreen() {
   const [error, setError] = useState<string | null>(null);
-  const { detectItems } = useGemini(process.env.EXPO_PUBLIC_GEMINI_API_KEY || '');
+  const { detectItems, findRecipe } = useGemini(process.env.EXPO_PUBLIC_GEMINI_API_KEY || '');
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   
@@ -92,7 +92,7 @@ export default function CameraScreen() {
 
     setLoadingState(CreateRecipeLoadingState.GENERATING_RECIPE);
 
-    // const recipe = await findRecipe(items);
+    const recipe = await findRecipe(items);
     // setRecipe(recipe);
     setLoadingState(CreateRecipeLoadingState.DISPLAYING_RECIPE);
   }
@@ -267,7 +267,7 @@ export default function CameraScreen() {
         {/* Generate a selectable list of items */}
         <MultiSelector 
           items={items!}
-          onSelectConfirm={setSelectedItems}
+          onSelectConfirm={handleFindRecipe}
           itemLabelKey="label"
           allowMultiple
           showSelectAll
