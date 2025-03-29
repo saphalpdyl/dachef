@@ -32,7 +32,26 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to figure out your fridge."
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/InriaSans-Bold.ttf",
+            "./assets/fonts/InriaSans-Italic.ttf",
+            "./assets/fonts/InriaSans-Regular.ttf",
+            "./assets/fonts/Jaro-Regular-Var.ttf",
+            "./assets/fonts/SpaceMono-Regular.ttf"
+          ]
+        }
       ]
+  
     ],
     "experiments": {
       "typedRoutes": true
