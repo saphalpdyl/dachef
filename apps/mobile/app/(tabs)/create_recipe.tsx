@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, SafeAreaView, TouchableOpacity, Image, Button } from "react-native";
+import { View, Text, SafeAreaView, TouchableOpacity, Image, Button, ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { DetectionItem, useGemini } from "@/hooks/useGemini";
 import { Theme } from "@/components/theme";
@@ -18,6 +18,7 @@ enum CreateRecipeLoadingState {
 
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import MultiSelector from "@/components/ui/SelectItems";
 
 const DownArrow = ({ size = 20, color = '#000', style = {} }) => {
   return (
@@ -57,7 +58,6 @@ export default function CameraScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   
   const [items, setItems] = useState<DetectionItem[] | null>(null);
-  const [selectedItems, setSelectedItems] = useState<DetectionItem[]>([]);
 
   const [loadingState, setLoadingState] = useState<CreateRecipeLoadingState>(CreateRecipeLoadingState.WAITING_FOR_IMAGE);
   
@@ -85,6 +85,16 @@ export default function CameraScreen() {
     const items = await detectItems(imageUri);
     setItems(items);
     setLoadingState(CreateRecipeLoadingState.WAITING_FOR_SELECTION);
+  }
+
+  async function handleFindRecipe() {
+    if ( !items ) return setError("No items selected");
+
+    setLoadingState(CreateRecipeLoadingState.GENERATING_RECIPE);
+
+    // const recipe = await findRecipe(items);
+    // setRecipe(recipe);
+    setLoadingState(CreateRecipeLoadingState.DISPLAYING_RECIPE);
   }
   
   useEffect(() => {
@@ -255,11 +265,18 @@ export default function CameraScreen() {
         </SectionLabel>
 
         {/* Generate a selectable list of items */}
-        {items?.map((item) => (
-          <TouchableOpacity key={item.label}>
-            <Text>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
+        <MultiSelector 
+          items={items!}
+          onSelectConfirm={setSelectedItems}
+          itemLabelKey="label"
+          allowMultiple
+          showSelectAll
+          showRandomSelect
+          randomCount={6}
+          style={{}}
+
+          disabled={loadingState !== CreateRecipeLoadingState.WAITING_FOR_SELECTION}
+        />
       </View>
     )
   }
@@ -288,7 +305,7 @@ export default function CameraScreen() {
             style={{
               color: Theme.background,
               fontSize: 30,
-              textAlign: "start",
+              textAlign: "left",
               paddingTop: 40,
               fontFamily: "Jaro-Regular-Var", // Try just "InriaSans"
             }}
@@ -299,7 +316,7 @@ export default function CameraScreen() {
             style={{
               color: Theme.background,
               fontSize: 12,
-              textAlign: "start",
+              textAlign: "left",
               fontFamily: "InriaSans-Regular",
             }}
           >
@@ -309,7 +326,9 @@ export default function CameraScreen() {
       </View>
     </SafeAreaView>
 
-    {renderContent.map((content, index) => content)}
+    <ScrollView>
+      {renderContent.map((content, index) => content)}
+    </ScrollView>
   </View>
 
 }
