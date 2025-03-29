@@ -3,6 +3,7 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 import * as FileSystem from 'expo-file-system';
 
 import { GoogleGenAI } from "@google/genai";
+import { ParsedRecipe } from '@/app/types';
 
 // Define types for the detection results
 export interface DetectionItem {
@@ -25,15 +26,7 @@ interface UseGeminiReturn {
     }[],
     response: string,
   }>;
-  parseRecipe: (rawResponse: string) => Promise<{
-    type: "breakfast" | "lunch" | "dinner",
-    title: string,
-    steps: {
-      description: string,
-      timeToComplete: string,
-      ingredients: string[],
-    }[],
-  }>;
+  parseRecipe: (rawResponse: string) => Promise<ParsedRecipe[]>;
 }
 
 export const useGemini = (apiKey: string): UseGeminiReturn => {
@@ -148,16 +141,7 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
     }
   };
 
-  const parseRecipe = async (rawResponse: string) : Promise<{
-    type: "breakfast" | "lunch" | "dinner",
-    title: string,
-    steps: {
-      description: string,
-      timeToComplete: string,
-      ingredients: string[],
-
-    }
-  }> => {
+  const parseRecipe = async (rawResponse: string) : Promise<ParsedRecipe[]> => {
     const response = await newGenAI.models.generateContent({
       model: "gemini-2.0-flash",
       contents: [
@@ -187,7 +171,7 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
     });
     
     console.log("RES: ", response.text);
-    return JSON.parse("{}");
+    return JSON.parse(parseJson(response.text ?? ""));
   }
   
   const findRecipe = async (items: DetectionItem[]): Promise<{

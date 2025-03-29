@@ -15,6 +15,7 @@ import { DetectionItem, useGemini } from "@/hooks/useGemini";
 import { Theme } from "@/components/theme";
 import SectionHeading from "@/components/ui/SectionHeading";
 import SectionLabel from "@/components/ui/SectionLabel";
+import { ParsedRecipe } from "@/app/types";
 
 // Display the selected image in a similar dotted bordered view
 enum CreateRecipeLoadingState {
@@ -23,17 +24,8 @@ enum CreateRecipeLoadingState {
   DETECTING_ITEMS = 2,
   WAITING_FOR_SELECTION = 3,
   GENERATING_RECIPE = 4,
-  DISPLAYING_RECIPE = 5,
-}
-
-interface ParsedRecipe {
-  type: "breakfast" | "lunch" | "dinner";
-  title: string;
-  steps: {
-    description: string;
-    timeToComplete: string;
-    ingredients: string[];
-  }[];
+  DISPLAYING_RAW_RECIPE = 5,
+  DISPLAYING_PARSED_RECIPE = 6,
 }
 
 import React from "react";
@@ -76,6 +68,9 @@ export default function CameraScreen() {
   const { detectItems, findRecipe, parseRecipe } = useGemini(
     process.env.EXPO_PUBLIC_GEMINI_API_KEY || ""
   );
+  
+  const [rawRecipeText, setRawRecipeText] = useState<string | null>(null);
+  const [parsedRecipes, setParsedRecipes] = useState<ParsedRecipe[] | null>(null);
 
   const [imageUri, setImageUri] = useState<string | null>(null);
 
@@ -141,20 +136,15 @@ export default function CameraScreen() {
       items
     );
 
-    // console.log(searchQueries);
-    // console.log(whereItSearched);
-    // console.log(response);
-
-    const recipe = await parseRecipe(response);
-
-    console.log(recipe);
-
+    setLoadingState(CreateRecipeLoadingState.DISPLAYING_RAW_RECIPE);
     setSearchQueries(searchQueries);
     setTimeout(() => {
       setWhereItSearched(whereItSearched);
     }, 600);
-
-    setLoadingState(CreateRecipeLoadingState.DISPLAYING_RECIPE);
+    
+    const recipes = await parseRecipe(response);
+    setParsedRecipes([recipes]);
+    setLoadingState(CreateRecipeLoadingState.DISPLAYING_PARSED_RECIPE);
   }
 
   useEffect(() => {
