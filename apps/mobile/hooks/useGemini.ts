@@ -27,6 +27,7 @@ interface UseGeminiReturn {
     response: string,
   }>;
   parseRecipe: (rawResponse: string) => Promise<ParsedRecipe[]>;
+  getEmissionDataFromCSVAndList: (ingredients: string[], emissionDataCSV: string) => Promise<any>;
 }
 
 export const useGemini = (apiKey: string): UseGeminiReturn => {
@@ -296,6 +297,18 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
       };
     }
   };
+
+  const getEmissionDataFromCSVAndList = async (ingredients: string[], emissionDataCSV: string) => {
+    const prompt = "You are a environmental scientist. You are given a list of ingredients and you need to return the emission data for each ingredient. The emission data is in the following format of CSV: GPC Classification and Average factor kg CO2e/kg. Return the emission data for each ingredient in the same order as the ingredients list. Return the data in a JSON array with the following format: [{ingredient: string, emissionData: number, level: 'low' | 'medium' | 'high'}]. If the item is missing, estimate the emission data based on the closest item. The emission data is " + emissionDataCSV;
+    const response = await newGenAI.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [{ role: 'model', parts: [{ text: prompt }] }, { role: 'user', parts: [{ text: `Ingredients: ${ingredients.join(', ')}` }] }],
+    });
+
+    const emissionData = JSON.parse(parseJson(response.text ?? ""));
+
+    return emissionData;
+  }
   
   
   return {
@@ -304,5 +317,6 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
     error,
     findRecipe,
     parseRecipe,
+    getEmissionDataFromCSVAndList
   };
 };

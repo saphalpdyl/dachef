@@ -17,6 +17,8 @@ import SectionHeading from "@/components/ui/SectionHeading";
 import SectionLabel from "@/components/ui/SectionLabel";
 import { ParsedRecipe } from "@/app/types";
 
+import { Leaf } from "lucide-react-native";
+
 // Display the selected image in a similar dotted bordered view
 enum CreateRecipeLoadingState {
   WAITING_FOR_IMAGE = 0,
@@ -37,6 +39,7 @@ import { supabase } from "@/components/supabase";
 
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
+import IngredientList from "@/components/ui/IngredientList";
 
 const DownArrow = ({ size = 20, color = "#000", style = {} }) => {
   return (
@@ -445,37 +448,43 @@ export default function CameraScreen({
             marginVertical: 10,
           }}
         ></View>
-        <Text
+        <View
           style={{
-            fontFamily: "InriaSans-Bold",
-            fontSize: 16,
-            fontWeight: "bold",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          Selected items
-        </Text>
-        <Text>
-          {selectedItems.map((item, index) => (
-            <View
-              key={item.label}
+          <Text
+            style={{
+              fontFamily: "InriaSans-Bold",
+              fontSize: 16,
+              fontWeight: "bold",
+            }}
+          >
+            Selected items
+          </Text>
+          <View
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            <Text
               style={{
-                backgroundColor: index % 2 === 1 ? "#f5f5f5" : "transparent",
-                padding: 4,
-                width: "100%",
+                fontFamily: "InriaSans-Regular",
+                fontSize: 12,
+                fontWeight: "bold",
               }}
             >
-              <Text
-                style={{
-                  fontFamily: "InriaSans-Regular",
-                  fontSize: 12,
-                  color: Theme.accent,
-                }}
-              >
-                {item.label}
-              </Text>
-            </View>
-          ))}
-        </Text>
+              Carbon footprint
+            </Text>
+            <Leaf size={16} color={Theme.emerald} />
+          </View>
+        </View>
+        <IngredientList ingredients={selectedItems.map((item) => item.label)} />
 
         <DownArrow size={30} color={"gray"} style={{ alignSelf: "center" }} />
         {/* <ActivityIndicator size="large" color={Theme.primary} style={{ marginTop: 20, }} /> */}

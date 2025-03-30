@@ -20,6 +20,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ParsedRecipe } from "../types";
 import { supabase } from "@/components/supabase";
 
+import mock_knot_instacart from "../../assets/mock/knot_instacart_mock.json";
+
 type RootStackParamList = {
   create_recipe: {};
   snap_view: {
@@ -182,7 +184,7 @@ export default function HomeScreen() {
                 color: Theme.primary,
               }}
             >
-              Upload a picture
+              Create a new snap
             </Text>
           </TouchableOpacity>
         </View>
@@ -199,7 +201,7 @@ export default function HomeScreen() {
           <SectionLabel>
             Recipes related to previous snaps
           </SectionLabel>
-          {snaps.map((snap) => (
+          {snaps.slice(0,4).map((snap) => (
             <TouchableOpacity key={snap.id} onPress={() => {
               // console.log({
               //   override_rawRecipeText: snap.raw_recipe_content,
@@ -281,6 +283,7 @@ export default function HomeScreen() {
             Cook cleaner and greener alternatives of your favorite dishes
           </SectionLabel>
         </View>
+
       </SafeAreaView>
     </View>
   );

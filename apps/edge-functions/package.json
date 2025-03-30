@@ -16,6 +16,7 @@
     "fs": "^0.0.1-security",
     "node": "^18.20.8",
     "node-fetch": "^3.3.2",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "react-native-csv": "^0.2.0"
   }
 }
