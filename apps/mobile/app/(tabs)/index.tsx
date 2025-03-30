@@ -201,18 +201,15 @@ export default function HomeScreen() {
           </SectionLabel>
           {snaps.map((snap) => (
             <TouchableOpacity key={snap.id} onPress={() => {
-              console.log({
-                override_rawRecipeText: snap.raw_recipe_content,
-                override_parsedRecipes: snap.parsed_recipes,
-                override_imageUri: snap.image_url,
-                override_items: snap.selected_items,
-                override_selectedItems: [],
-                override_searchQueries: snap.search_queries,
-                override_whereItSearched: snap.grounding_chunks,
-              })
-
-              // https://vsijqepwoadwisdtbktt.supabase.co/storage/v1/object/public/snapimages/public/1743293752662.jpeg
-              
+              // console.log({
+              //   override_rawRecipeText: snap.raw_recipe_content,
+              //   override_parsedRecipes: snap.parsed_recipes,
+              //   override_imageUri: snap.image_url,
+              //   override_items: snap.selected_items,
+              //   override_selectedItems: [],
+              //   override_searchQueries: snap.search_queries,
+              //   override_whereItSearched: snap.grounding_chunks,
+              // })
               navigation.navigate("snap_view", {
                 override_rawRecipeText: snap.raw_recipe_content,
                 override_parsedRecipes: JSON.stringify(snap.parsed_recipes),
@@ -224,9 +221,40 @@ export default function HomeScreen() {
                 override_searchQueries: snap.search_queries,
                 override_whereItSearched: JSON.stringify(snap.grounding_chunks),
               });
-            }}>
-              <View>
-                <Text>{snap.id}</Text>
+            }}
+            style={{
+              backgroundColor: "#fafafa",
+              padding: 10,
+              borderRadius: 10,
+              marginBottom: 10,
+            }}
+            >
+              <View style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Image
+                  source={{ uri: `https://vsijqepwoadwisdtbktt.supabase.co/storage/v1/object/public/snapimages/${snap.image_url}` }}
+                  style={{ width: 40, height: 40, borderRadius: 10 }}
+                />
+                <View style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  <View style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 5 }}>  
+                    <Text style={{ fontFamily: "InriaSans-Regular", fontSize: 12, color: "#666", fontWeight: "bold" }}>
+                      {snap.parsed_recipes.length} recipes | 
+                    </Text>
+                    <Text style={{ fontFamily: "InriaSans-Regular", fontSize: 12, color: "#666" }}>
+                      {snap.selected_items.length > 3 
+                        ? `${snap.selected_items.slice(0,3).join(", ")}...`
+                        : snap.selected_items.join(", ")}
+                    </Text>
+                  </View>
+                  <Text style={{ fontFamily: "InriaSans-Regular", fontSize: 12, color: "#666" }}>
+                    {new Date(snap.created_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
               </View>
             </TouchableOpacity>
           ))}
