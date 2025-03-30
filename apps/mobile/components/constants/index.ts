@@ -1,1 +1,4 @@
 export const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+
+export const SUPABASE_PROJECT_URI = process.env.EXPO_PUBLIC_SUPABASE_PROJECT_URI;
+export const SUPABASE_API_KEY = process.env.EXPO_PUBLIC_SUPABASE_API_KEY;

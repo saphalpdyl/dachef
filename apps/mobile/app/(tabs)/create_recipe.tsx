@@ -33,6 +33,10 @@ import { StyleSheet } from "react-native";
 import MultiSelector from "@/components/ui/SelectItems";
 import Collapsable from "@/components/ui/Collaspable";
 import { RecipeCollaspable } from "@/components/ui/RecipeCollaspable";
+import { supabase } from "@/components/supabase";
+
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 
 const DownArrow = ({ size = 20, color = "#000", style = {} }) => {
   return (
@@ -150,6 +154,59 @@ export default function CameraScreen() {
     const recipes = await parseRecipe(response);
     setParsedRecipes(recipes);
     setLoadingState(CreateRecipeLoadingState.DISPLAYING_PARSED_RECIPE);
+
+    // Backup on cloud
+    const snapImageLocalResponse = await fetch(imageUri!);
+    const blob = await snapImageLocalResponse.blob();
+    const fileExt = imageUri!.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    
+    // For Expo, we can use FileSystem to get the base64 data
+    const base64 = await FileSystem.readAsStringAsync(imageUri!, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    
+    // Upload directly using base64
+    const { data: snapImageBucket, error } = await supabase.storage
+      .from("snapimages")
+      .upload(`public/${fileName}`, decode(base64), {
+        contentType: "image/jpeg",
+      });
+
+    if ( error ) {
+      return setError("Error uploading image");
+    }
+
+    const {
+      path,
+    } = snapImageBucket;
+
+    // Insert snap into database
+    const { data: snapData, error: snapError } = await supabase.from("snap").insert({
+      image_url: path,
+      selected_ingredients: selectedItems?.map((item) => item.label),
+      raw_recipe_content: rawRecipeText,
+      search_queries: searchQueries,
+      grounding_chunks: whereItSearched,
+    }).select("id");
+
+    if ( !snapData || snapError ) {
+      return setError("Error uploading recipe");
+    }
+
+    const promises = [];
+    
+    for ( const recipe of recipes ) {
+      promises.push(supabase.from("recipe").insert({
+        parent_snap: snapData[0].id,
+        title: recipe.title,
+        steps: recipe.steps,
+        totaltime: recipe.totalTime,
+        type: recipe.type,
+      }).select());
+    }
+
+    await Promise.all(promises);
   }
 
   useEffect(() => {
