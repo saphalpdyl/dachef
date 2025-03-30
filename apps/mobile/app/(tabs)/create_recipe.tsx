@@ -31,6 +31,8 @@ enum CreateRecipeLoadingState {
 import React from "react";
 import { StyleSheet } from "react-native";
 import MultiSelector from "@/components/ui/SelectItems";
+import Collapsable from "@/components/ui/Collaspable";
+import { RecipeCollaspable } from "@/components/ui/RecipeCollaspable";
 
 const DownArrow = ({ size = 20, color = "#000", style = {} }) => {
   return (
@@ -68,9 +70,11 @@ export default function CameraScreen() {
   const { detectItems, findRecipe, parseRecipe } = useGemini(
     process.env.EXPO_PUBLIC_GEMINI_API_KEY || ""
   );
-  
+
   const [rawRecipeText, setRawRecipeText] = useState<string | null>(null);
-  const [parsedRecipes, setParsedRecipes] = useState<ParsedRecipe[] | null>(null);
+  const [parsedRecipes, setParsedRecipes] = useState<ParsedRecipe[] | null>(
+    null
+  );
 
   const [imageUri, setImageUri] = useState<string | null>(null);
 
@@ -141,9 +145,10 @@ export default function CameraScreen() {
     setTimeout(() => {
       setWhereItSearched(whereItSearched);
     }, 600);
-    
+    setRawRecipeText(response);
+
     const recipes = await parseRecipe(response);
-    setParsedRecipes([recipes]);
+    setParsedRecipes(recipes);
     setLoadingState(CreateRecipeLoadingState.DISPLAYING_PARSED_RECIPE);
   }
 
@@ -397,7 +402,46 @@ export default function CameraScreen() {
         {/* <ActivityIndicator size="large" color={Theme.primary} style={{ marginTop: 20, }} /> */}
       </View>
     );
+  }
 
+  if (loadingState >= CreateRecipeLoadingState.DISPLAYING_PARSED_RECIPE) {
+    renderContent.push(
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 20,
+        }}
+      >
+        <SectionHeading>Final Recipes</SectionHeading>
+        <SectionLabel>Click to expand or start a cooking session.</SectionLabel>
+        {parsedRecipes !== null && parsedRecipes?.map((recipe, index) => (
+          <RecipeCollaspable key={recipe.title} recipe={recipe} />
+        ))}
+      </View>
+    );
+  }
+
+  if (loadingState >= CreateRecipeLoadingState.DISPLAYING_RAW_RECIPE) {
+    renderContent.push(
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 20,
+        }}
+      >
+        <SectionHeading>Raw recipes</SectionHeading>
+        <SectionLabel>
+          This is a raw recipe from the web. Wait for the bot to parse it.
+        </SectionLabel>
+        <Collapsable text={rawRecipeText!} />
+      </View>
+    );
+  }
+
+  if (
+    loadingState >= CreateRecipeLoadingState.DISPLAYING_RAW_RECIPE &&
+    searchQueries !== null
+  ) {
     renderContent.push(
       <View
         style={{
@@ -415,9 +459,9 @@ export default function CameraScreen() {
           {searchQueries?.map((query, index) => (
             <TouchableOpacity
               key={query}
-              style={{ 
-                flexDirection: "row", 
-                alignItems: "center", 
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
                 gap: 10,
                 borderRadius: 10,
                 backgroundColor: "#f5f5f5",
@@ -425,7 +469,10 @@ export default function CameraScreen() {
                 padding: 2,
               }}
               onPress={() => {
-                if (whereItSearched?.[0].web.uri !== undefined && whereItSearched?.[0].web.uri !== null ) {
+                if (
+                  whereItSearched?.[0].web.uri !== undefined &&
+                  whereItSearched?.[0].web.uri !== null
+                ) {
                   Linking.openURL(`https://www.google.com/search?q=${query}`);
                 }
               }}
@@ -443,7 +490,12 @@ export default function CameraScreen() {
         </View>
       </View>
     );
+  }
 
+  if (
+    loadingState >= CreateRecipeLoadingState.DISPLAYING_RAW_RECIPE &&
+    whereItSearched !== null
+  ) {
     renderContent.push(
       <View
         style={{
@@ -452,36 +504,44 @@ export default function CameraScreen() {
         }}
       >
         <SectionHeading>Sources</SectionHeading>
-        <SectionLabel>
-          We found the following recipes on the web:
-        </SectionLabel>
+        <SectionLabel>We found the following recipes on the web:</SectionLabel>
         <View>
           {whereItSearched?.map((source, index) => (
-            <TouchableOpacity key={source.web.title} style={{ 
-              marginBottom: 10,
-              backgroundColor: '#fff',
-              borderRadius: 8,
-              padding: 8,
-              shadowColor: '#000',
-              shadowOffset: {
-                width: 0,
-                height: .5,
-              },
-              shadowOpacity: 0.25,
-              shadowRadius: 0.84,
-              elevation: 1,
-            }}
-            onPress={() => {
-              Linking.openURL(source.web.uri);
-            }}
+            <TouchableOpacity
+              key={source.web.title}
+              style={{
+                marginBottom: 10,
+                backgroundColor: "#fff",
+                borderRadius: 8,
+                padding: 8,
+                shadowColor: "#000",
+                shadowOffset: {
+                  width: 0,
+                  height: 0.5,
+                },
+                shadowOpacity: 0.25,
+                shadowRadius: 0.84,
+                elevation: 1,
+              }}
+              onPress={() => {
+                Linking.openURL(source.web.uri);
+              }}
             >
-              <Text style={{ fontFamily: "InriaSans-Bold", fontSize: 12 }}>{source.web.title}</Text>
-              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontFamily: "InriaSans-Regular", fontSize: 10 }}>{source.web.uri}</Text>
+              <Text style={{ fontFamily: "InriaSans-Bold", fontSize: 12 }}>
+                {source.web.title}
+              </Text>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ fontFamily: "InriaSans-Regular", fontSize: 10 }}
+              >
+                {source.web.uri}
+              </Text>
             </TouchableOpacity>
-          ))} 
+          ))}
         </View>
       </View>
-    );  
+    );
   }
 
   return (
