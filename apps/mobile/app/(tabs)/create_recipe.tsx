@@ -87,9 +87,7 @@ export default function CameraScreen({
   override_items?: DetectionItem[] | null,
   override_selectedItems?: string | null,
   override_searchQueries?: string[] | null,
-  override_whereItSearched?: Array<{
-    web: { title: string; uri: string };
-  }> | null,
+  override_whereItSearched?: string | null,
   startCompleted?: boolean,
 }) {
 
@@ -113,7 +111,7 @@ export default function CameraScreen({
   const [searchQueries, setSearchQueries] = useState<string[] | null>(override_searchQueries || null);
   const [whereItSearched, setWhereItSearched] = useState<Array<{
     web: { title: string; uri: string };
-  }> | null>(override_whereItSearched || null);
+  }> | null>(override_whereItSearched ? JSON.parse(override_whereItSearched) : null);
 
   const [loadingState, setLoadingState] = useState<CreateRecipeLoadingState>(
     CreateRecipeLoadingState.WAITING_FOR_IMAGE

@@ -29,7 +29,7 @@ type RootStackParamList = {
     override_items: string;
     override_selectedItems: string;
     override_searchQueries: string[];
-    override_whereItSearched: string[];
+    override_whereItSearched: string;
   };
 };
 
@@ -222,7 +222,7 @@ export default function HomeScreen() {
                   label: i,
                 }))),
                 override_searchQueries: snap.search_queries,
-                override_whereItSearched: snap.grounding_chunks,
+                override_whereItSearched: JSON.stringify(snap.grounding_chunks),
               });
             }}>
               <View>
