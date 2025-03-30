@@ -69,28 +69,51 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function CameraScreen() {
+export default function CameraScreen({
+  disableImageUploadOnLoad = false,
+  override_rawRecipeText = null,
+  override_parsedRecipes = null,
+  override_imageUri = null,
+  override_items = null,
+  override_selectedItems = null,
+  override_searchQueries = null,
+  override_whereItSearched = null,
+  startCompleted = false,
+}: {
+  disableImageUploadOnLoad?: boolean,
+  override_rawRecipeText?: string | null,
+  override_parsedRecipes?: string | null,
+  override_imageUri?: string | null,
+  override_items?: DetectionItem[] | null,
+  override_selectedItems?: string | null,
+  override_searchQueries?: string[] | null,
+  override_whereItSearched?: Array<{
+    web: { title: string; uri: string };
+  }> | null,
+  startCompleted?: boolean,
+}) {
+
   const [error, setError] = useState<string | null>(null);
   const { detectItems, findRecipe, parseRecipe } = useGemini(
     process.env.EXPO_PUBLIC_GEMINI_API_KEY || ""
   );
 
-  const [rawRecipeText, setRawRecipeText] = useState<string | null>(null);
+  const [rawRecipeText, setRawRecipeText] = useState<string | null>(override_rawRecipeText || null);
   const [parsedRecipes, setParsedRecipes] = useState<ParsedRecipe[] | null>(
-    null
+    override_parsedRecipes ? JSON.parse(override_parsedRecipes) : null
   );
 
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(override_imageUri || null);
 
-  const [items, setItems] = useState<DetectionItem[] | null>(null);
+  const [items, setItems] = useState<DetectionItem[] | null>(override_items || null);
   const [selectedItems, setSelectedItems] = useState<DetectionItem[] | null>(
-    null
+    override_selectedItems ? JSON.parse(override_selectedItems) : null
   );
 
-  const [searchQueries, setSearchQueries] = useState<string[] | null>(null);
+  const [searchQueries, setSearchQueries] = useState<string[] | null>(override_searchQueries || null);
   const [whereItSearched, setWhereItSearched] = useState<Array<{
     web: { title: string; uri: string };
-  }> | null>(null);
+  }> | null>(override_whereItSearched || null);
 
   const [loadingState, setLoadingState] = useState<CreateRecipeLoadingState>(
     CreateRecipeLoadingState.WAITING_FOR_IMAGE
@@ -140,14 +163,14 @@ export default function CameraScreen() {
     setSelectedItems(items);
     setLoadingState(CreateRecipeLoadingState.GENERATING_RECIPE);
 
-    const { searchQueries, whereItSearched, response } = await findRecipe(
+    const { searchQueries, whereItSearched: groundingChunks, response } = await findRecipe(
       items
     );
 
     setLoadingState(CreateRecipeLoadingState.DISPLAYING_RAW_RECIPE);
     setSearchQueries(searchQueries);
     setTimeout(() => {
-      setWhereItSearched(whereItSearched);
+      setWhereItSearched(groundingChunks);
     }, 600);
     setRawRecipeText(response);
 
@@ -156,8 +179,6 @@ export default function CameraScreen() {
     setLoadingState(CreateRecipeLoadingState.DISPLAYING_PARSED_RECIPE);
 
     // Backup on cloud
-    const snapImageLocalResponse = await fetch(imageUri!);
-    const blob = await snapImageLocalResponse.blob();
     const fileExt = imageUri!.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
     
@@ -184,10 +205,10 @@ export default function CameraScreen() {
     // Insert snap into database
     const { data: snapData, error: snapError } = await supabase.from("snap").insert({
       image_url: path,
-      selected_ingredients: selectedItems?.map((item) => item.label),
-      raw_recipe_content: rawRecipeText,
+      selected_ingredients: items?.map((item) => item.label),
+      raw_recipe_content: response,
       search_queries: searchQueries,
-      grounding_chunks: whereItSearched,
+      grounding_chunks: groundingChunks,
     }).select("id");
 
     if ( !snapData || snapError ) {
@@ -210,6 +231,9 @@ export default function CameraScreen() {
   }
 
   useEffect(() => {
+    if ( startCompleted ) setLoadingState(CreateRecipeLoadingState.DISPLAYING_PARSED_RECIPE);
+    if ( disableImageUploadOnLoad ) return;
+    
     setTimeout(handleImageUpload, 100);
   }, []);
 
@@ -471,6 +495,8 @@ export default function CameraScreen() {
       >
         <SectionHeading>Final Recipes</SectionHeading>
         <SectionLabel>Click to expand or start a cooking session.</SectionLabel>
+        <Text>
+        </Text>
         {parsedRecipes !== null && parsedRecipes?.map((recipe, index) => (
           <RecipeCollaspable key={recipe.title} recipe={recipe} />
         ))}

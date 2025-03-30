@@ -172,7 +172,6 @@ export const useGemini = (apiKey: string): UseGeminiReturn => {
       }
     });
     
-    console.log("RES: ", response.text);
     return JSON.parse(parseJson(response.text ?? ""));
   }
   

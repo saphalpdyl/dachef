@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   Image,
@@ -9,15 +9,51 @@ import {
   TouchableOpacity,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { useGemini } from "@/hooks/useGemini";
+import { DetectionItem, useGemini } from "@/hooks/useGemini";
 import { Theme } from "@/components/theme";
 import { useFonts } from "expo-font";
 import SectionHeading from "@/components/ui/SectionHeading";
 import SectionLabel from "@/components/ui/SectionLabel";
 import { useRouter } from "expo-router";
+import { useNavigation } from "expo-router";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { ParsedRecipe } from "../types";
+import { supabase } from "@/components/supabase";
+
+type RootStackParamList = {
+  create_recipe: {};
+  snap_view: {
+    override_rawRecipeText: string;
+    override_parsedRecipes: string;
+    override_imageUri: string;
+    override_items: string;
+    override_selectedItems: string;
+    override_searchQueries: string[];
+    override_whereItSearched: string[];
+  };
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
-  const router = useRouter();
+  const [ snaps, setSnaps ] = useState<{
+    id: string;
+    created_at: string;
+    raw_recipe_content: string;
+    parsed_recipes: ParsedRecipe[];
+    image_url: string;
+    items: DetectionItem[];
+    selected_items: DetectionItem[];
+    search_queries: string[];
+    grounding_chunks: string[];
+  }[]>([]);
+  
+  const navigation = useNavigation<NavigationProp>();
+  
+  useEffect(() => {
+    getPreviousSnaps();
+  }, []);
+
   const [fontsLoaded] = useFonts({
     InriaSans: require("../../assets/fonts/InriaSans-Bold.ttf"), // Adjust the path as needed
     "InriaSans-Italic": require("../../assets/fonts/InriaSans-Italic.ttf"),
@@ -29,6 +65,34 @@ export default function HomeScreen() {
   if (!fontsLoaded) {
     return <Text>Loading...</Text>; // Or a loading indicator
   }
+
+  async function getPreviousSnaps() {
+    const { data, error } = await supabase.from("snap").select("*").limit(4);
+    
+    if (!data) return;
+
+    // Get the recipe for each snap
+    
+    const newData = await Promise.all(data.map(async (snap) => {
+      
+      const { data: recipeData, error: recipeError } = await supabase.from("recipe").select("*").eq("parent_snap", snap.id as string);
+      return {
+        ...snap,
+        selected_items: snap.selected_ingredients,
+        parsed_recipes: recipeData?.map((recipe) => ({
+          totalTime: recipe.totaltime,
+          title: recipe.title,
+          type: recipe.type,
+          steps: recipe.steps,
+        })) as ParsedRecipe[],
+      };
+    }));
+
+    setSnaps(newData);
+    console.log("NEW DATA", JSON.stringify(newData, null, 2));
+
+  }
+
 
   return (
     <View
@@ -56,9 +120,9 @@ export default function HomeScreen() {
               style={{
                 color: Theme.background,
                 fontSize: 30,
-                textAlign: "start",
+                textAlign: "left",
                 paddingTop: 40,
-                fontFamily: "Jaro-Regular-Var", // Try just "InriaSans"
+                fontFamily: "Jaro-Regular-Var",
               }}
             >
               DACHEF
@@ -67,7 +131,7 @@ export default function HomeScreen() {
               style={{
                 color: Theme.background,
                 fontSize: 12,
-                textAlign: "start",
+                textAlign: "left",
                 fontFamily: "InriaSans-Regular",
               }}
             >
@@ -103,7 +167,7 @@ export default function HomeScreen() {
             }}
             onPress={() => {
               // router.push("/camera");
-              router.navigate("/create_recipe");
+              navigation.navigate({ name: "create_recipe", params: {} });
             }}
           >
             <Image
@@ -130,11 +194,42 @@ export default function HomeScreen() {
           }}
         >
           <SectionHeading>
-            Previous Recipes
+            Previous Snaps
           </SectionHeading>
           <SectionLabel>
-            Based on what you have had this week
+            Recipes related to previous snaps
           </SectionLabel>
+          {snaps.map((snap) => (
+            <TouchableOpacity key={snap.id} onPress={() => {
+              console.log({
+                override_rawRecipeText: snap.raw_recipe_content,
+                override_parsedRecipes: snap.parsed_recipes,
+                override_imageUri: snap.image_url,
+                override_items: snap.selected_items,
+                override_selectedItems: [],
+                override_searchQueries: snap.search_queries,
+                override_whereItSearched: snap.grounding_chunks,
+              })
+
+              // https://vsijqepwoadwisdtbktt.supabase.co/storage/v1/object/public/snapimages/public/1743293752662.jpeg
+              
+              navigation.navigate("snap_view", {
+                override_rawRecipeText: snap.raw_recipe_content,
+                override_parsedRecipes: JSON.stringify(snap.parsed_recipes),
+                override_imageUri: `https://vsijqepwoadwisdtbktt.supabase.co/storage/v1/object/public/snapimages/${snap.image_url}`,
+                override_items: JSON.stringify(snap.selected_items),
+                override_selectedItems: JSON.stringify(snap.selected_items.map(i => ({
+                  label: i,
+                }))),
+                override_searchQueries: snap.search_queries,
+                override_whereItSearched: snap.grounding_chunks,
+              });
+            }}>
+              <View>
+                <Text>{snap.id}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
         <View
           style={{
